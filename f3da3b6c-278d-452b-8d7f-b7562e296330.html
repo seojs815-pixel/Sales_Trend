@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SM1팀 월별 트렌드·성장률 (25.10~26.06)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--ink:#1c2530;--muted:#66707b;--line:#d9dee4;--bg:#f4f6f9;--card:#fff;
+        --green:#1F7A44;--blue:#1F6F8B;--gray:#7A8590;--hdr:#1F6F8B;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI','Malgun Gothic',Arial,sans-serif;background:var(--bg);color:var(--ink);padding:20px;line-height:1.45}
+  .wrap{max-width:1240px;margin:0 auto}
+  h1{font-size:21px;font-weight:700}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:4px}
+  .bar{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px 14px;margin:14px 0;flex-wrap:wrap}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap}
+  .tabs button{border:1px solid var(--line);background:#fff;padding:8px 14px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-radius:8px}
+  .tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .seg{display:inline-flex}
+  .seg button{border:1px solid var(--line);background:#fff;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer}
+  .seg button:first-child{border-radius:7px 0 0 7px}.seg button:last-child{border-radius:0 7px 7px 0;border-left:none}
+  .seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .spacer{margin-left:auto}
+  .note{font-size:11.5px;color:#c0392b;font-weight:600}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .box h3{font-size:15px;font-weight:700;text-align:center;margin-bottom:10px}
+  .chart-h{position:relative;height:340px}
+  .chart-tall{position:relative;height:420px}
+  select{padding:7px 10px;border:1px solid var(--line);border-radius:7px;font-size:13px;font-weight:600;color:var(--ink)}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:16px;background:#fff}
+  th,td{border:1px solid #9BB7CE;padding:6px 8px;text-align:right}
+  thead th{background:var(--hdr);color:#fff;font-weight:700;text-align:center;font-size:11.5px}
+  td.name{text-align:left;font-weight:600;white-space:nowrap}
+  tr.grand td{background:#E8E8E8;font-weight:700}
+  .pill{display:inline-block;font-size:10px;font-weight:700;color:#fff;border-radius:4px;padding:1px 6px;margin-left:5px}
+  .g2{background:var(--green)}.g1{background:var(--blue)}.g0{background:var(--gray)}
+  .cap{font-size:11.5px;color:var(--muted);margin-top:10px}
+  .hide{display:none}
+  @media(max-width:900px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>서울수도권1팀(SM1) 월별 매출 트렌드 · 성장률</h1>
+  <div class="sub">기간 25.10~26.06(9개월) · 실적=수량×공식 제조사단가 · <b>도매→도매 제외</b>(약국·병원·기타 대상만) · 항VEGF 주사제 제외 · 팀원 9명</div>
+
+  <div class="bar">
+    <div class="tabs" id="tabs">
+      <button data-t="team" class="on">팀 전체</button>
+      <button data-t="mrAll">MR별 · 전체제품</button>
+      <button data-t="mrFoc">MR별 · Focus5</button>
+      <button data-t="mrDetail">MR × Focus 상세</button>
+      <button data-t="growth">성장률 분석</button>
+    </div>
+    <span class="seg spacer" id="unitSeg">
+      <button data-u="v" class="on">실적(원)</button>
+      <button data-u="q">수량(EA)</button>
+    </span>
+  </div>
+
+  <section id="tab-team">
+    <div class="row">
+      <div class="box"><h3>전체 제품 매출 트렌드</h3><div class="chart-h"><canvas id="cTeamAll"></canvas></div></div>
+      <div class="box"><h3>Focus 5 매출 트렌드</h3><div class="chart-h"><canvas id="cTeamFoc"></canvas></div></div>
+    </div>
+    <div class="box" style="margin-top:16px"><h3>Focus 5 제품별 트렌드 (팀 합계)</h3><div class="chart-h"><canvas id="cTeamFocProd"></canvas></div></div>
+    <div id="teamTable"></div>
+  </section>
+
+  <section id="tab-mrAll" class="hide">
+    <div class="box"><h3>MR별 · 전체제품 트렌드</h3><div class="chart-tall"><canvas id="cMrAll"></canvas></div></div>
+    <div id="mrAllTable"></div>
+  </section>
+
+  <section id="tab-mrFoc" class="hide">
+    <div class="box"><h3>MR별 · Focus 5 트렌드</h3><div class="chart-tall"><canvas id="cMrFoc"></canvas></div></div>
+    <div id="mrFocTable"></div>
+  </section>
+
+  <section id="tab-mrDetail" class="hide">
+    <div class="bar" style="margin-top:0">
+      <span style="font-size:13px;font-weight:700">담당 MR</span>
+      <select id="mrPick"></select>
+      <span class="cap" id="mrMeta" style="margin-top:0"></span>
+    </div>
+    <div class="box"><h3 id="detTitle"></h3><div class="chart-tall"><canvas id="cDetail"></canvas></div></div>
+    <div id="detTable"></div>
+  </section>
+
+  <section id="tab-growth" class="hide">
+    <div class="bar" style="margin-top:0">
+      <span style="font-size:13px;font-weight:700">성장지표</span>
+      <span class="seg" id="metricSeg">
+        <button data-m="MoM" class="on">MoM</button><button data-m="QoQ">QoQ</button><button data-m="HoH">HoH</button><button data-m="YoY">YoY</button>
+      </span>
+      <span style="font-size:13px;font-weight:700;margin-left:10px">대상</span>
+      <span class="seg" id="tgtSeg">
+        <button data-g="all" class="on">전체제품</button><button data-g="foc">Focus5</button>
+      </span>
+      <span class="note" id="gNote"></span>
+    </div>
+    <div class="row">
+      <div class="box"><h3 id="gTeamTitle">팀 성장률 추이</h3><div class="chart-h"><canvas id="cGrowthTeam"></canvas></div></div>
+      <div class="box"><h3 id="gRankTitle">담당자별 성장률 순위</h3><div class="chart-h" style="height:360px"><canvas id="cRank"></canvas></div></div>
+    </div>
+    <div id="rankTable"></div>
+    <div id="gTable"></div>
+    <div class="cap">기간 정의 — 분기: 역년(25Q4=10~12월·26Q1=1~3월·26Q2=4~6월), 반기: H1=1~6월·H2=7~12월. 완전한 기간끼리만 비교(불완전 기간·전년 동기 부재 시 N/A). 매월 자료를 추가하면 HoH·YoY가 자동 채워집니다. 순위는 각 지표의 <b>가장 최근 비교 구간</b> 기준.</div>
+  </section>
+</div>
+
+<script>
+const D = {"labels":["25.10","25.11","25.12","26.01","26.02","26.03","26.04","26.05","26.06"],"months":["202510","202511","202512","202601","202602","202603","202604","202605","202606"],"mrs":["한종찬","서준희","류동균","오민석","강태욱","한정호","배승현","임다빈","주해린"],"focusOrder":["ALS-LX","CSD-S","EYB UD","TPC UD","IKR"],"team":{"202510":{"all_v":1740776755.0,"all_q":243300,"foc_v":823478285.0,"foc_q":25407,"fp":{"ALS-LX":{"v":37789920.0,"q":5520},"CSD-S":{"v":461056428.0,"q":12978},"EYB UD":{"v":37283858.0,"q":794},"TPC UD":{"v":66669057.0,"q":1421},"IKR":{"v":220679022.0,"q":4694}}},"202511":{"all_v":1785145824.0,"all_q":231031,"foc_v":847342821.0,"foc_q":24985,"fp":{"ALS-LX":{"v":29533644.0,"q":4314},"CSD-S":{"v":475693140.0,"q":13390},"EYB UD":{"v":33527298.0,"q":714},"TPC UD":{"v":71173089.0,"q":1517},"IKR":{"v":237415650.0,"q":5050}}},"202512":{"all_v":1986289516.0,"all_q":258734,"foc_v":975203286.0,"foc_q":28426,"fp":{"ALS-LX":{"v":30656388.0,"q":4478},"CSD-S":{"v":560102916.0,"q":15766},"EYB UD":{"v":35499492.0,"q":756},"TPC UD":{"v":85060521.0,"q":1813},"IKR":{"v":263883969.0,"q":5613}}},"202601":{"all_v":1944840427.0,"all_q":265673,"foc_v":917817615.0,"foc_q":26374,"fp":{"ALS-LX":{"v":27657840.0,"q":4040},"CSD-S":{"v":493704822.0,"q":13897},"EYB UD":{"v":45078720.0,"q":960},"TPC UD":{"v":68404986.0,"q":1458},"IKR":{"v":282971247.0,"q":6019}}},"202602":{"all_v":1601366084.0,"all_q":232731,"foc_v":740509727.0,"foc_q":21790,"fp":{"ALS-LX":{"v":25590348.0,"q":3738},"CSD-S":{"v":413202906.0,"q":11631},"EYB UD":{"v":34466438.0,"q":734},"TPC UD":{"v":55174392.0,"q":1176},"IKR":{"v":212075643.0,"q":4511}}},"202603":{"all_v":1925251798.0,"all_q":277774,"foc_v":902686028.0,"foc_q":27270,"fp":{"ALS-LX":{"v":36379644.0,"q":5314},"CSD-S":{"v":512569128.0,"q":14428},"EYB UD":{"v":41509988.0,"q":884},"TPC UD":{"v":62118108.0,"q":1324},"IKR":{"v":250109160.0,"q":5320}}},"202604":{"all_v":2033021557.0,"all_q":291073,"foc_v":971496085.0,"foc_q":32694,"fp":{"ALS-LX":{"v":68234082.0,"q":9967},"CSD-S":{"v":510153360.0,"q":14360},"EYB UD":{"v":67383295.0,"q":1435},"TPC UD":{"v":82480086.0,"q":1758},"IKR":{"v":243245262.0,"q":5174}}},"202605":{"all_v":1791363955.0,"all_q":250849,"foc_v":880127246.0,"foc_q":26859,"fp":{"ALS-LX":{"v":38734668.0,"q":5658},"CSD-S":{"v":479636526.0,"q":13501},"EYB UD":{"v":82926062.0,"q":1766},"TPC UD":{"v":70938504.0,"q":1512},"IKR":{"v":207891486.0,"q":4422}}},"202606":{"all_v":1984544862.0,"all_q":273435,"foc_v":961348298.0,"foc_q":28457,"fp":{"ALS-LX":{"v":36270108.0,"q":5298},"CSD-S":{"v":505428402.0,"q":14227},"EYB UD":{"v":99407969.0,"q":2117},"TPC UD":{"v":74175777.0,"q":1581},"IKR":{"v":246066042.0,"q":5234}}}},"byMR":{"한종찬":{"202510":{"all_v":214385724.0,"all_q":30046,"foc_v":103336493.0,"foc_q":3213,"fp":{"ALS-LX":{"v":3874836.0,"q":566},"CSD-S":{"v":77233524.0,"q":2174},"EYB UD":{"v":1925237.0,"q":41},"TPC UD":{"v":3284190.0,"q":70},"IKR":{"v":17018706.0,"q":362}}},"202511":{"all_v":219423639.0,"all_q":28471,"foc_v":108839531.0,"foc_q":3339,"fp":{"ALS-LX":{"v":3689994.0,"q":539},"CSD-S":{"v":81887430.0,"q":2305},"EYB UD":{"v":2911334.0,"q":62},"TPC UD":{"v":2861937.0,"q":61},"IKR":{"v":17488836.0,"q":372}}},"202512":{"all_v":249414112.0,"all_q":30799,"foc_v":132813912.0,"foc_q":3959,"fp":{"ALS-LX":{"v":3320310.0,"q":485},"CSD-S":{"v":104588544.0,"q":2944},"EYB UD":{"v":2113065.0,"q":45},"TPC UD":{"v":4550949.0,"q":97},"IKR":{"v":18241044.0,"q":388}}},"202601":{"all_v":262778185.0,"all_q":33934,"foc_v":135144970.0,"foc_q":3904,"fp":{"ALS-LX":{"v":2375562.0,"q":347},"CSD-S":{"v":106542474.0,"q":2999},"EYB UD":{"v":1033054.0,"q":22},"TPC UD":{"v":2486601.0,"q":53},"IKR":{"v":22707279.0,"q":483}}},"202602":{"all_v":211027348.0,"all_q":29779,"foc_v":106710797.0,"foc_q":3045,"fp":{"ALS-LX":{"v":2040108.0,"q":298},"CSD-S":{"v":75670380.0,"q":2130},"EYB UD":{"v":3615689.0,"q":77},"TPC UD":{"v":1172925.0,"q":25},"IKR":{"v":24211695.0,"q":515}}},"202603":{"all_v":246362328.0,"all_q":34900,"foc_v":126221578.0,"foc_q":3759,"fp":{"ALS-LX":{"v":3696840.0,"q":540},"CSD-S":{"v":89063682.0,"q":2507},"EYB UD":{"v":5400055.0,"q":115},"TPC UD":{"v":2815020.0,"q":60},"IKR":{"v":25245981.0,"q":537}}},"202604":{"all_v":250186513.0,"all_q":35777,"foc_v":128865001.0,"foc_q":4409,"fp":{"ALS-LX":{"v":8482194.0,"q":1239},"CSD-S":{"v":88566318.0,"q":2493},"EYB UD":{"v":3850474.0,"q":82},"TPC UD":{"v":3284190.0,"q":70},"IKR":{"v":24681825.0,"q":525}}},"202605":{"all_v":238053508.0,"all_q":32665,"foc_v":124257268.0,"foc_q":3650,"fp":{"ALS-LX":{"v":3067008.0,"q":448},"CSD-S":{"v":90733404.0,"q":2554},"EYB UD":{"v":4977442.0,"q":106},"TPC UD":{"v":797589.0,"q":17},"IKR":{"v":24681825.0,"q":525}}},"202606":{"all_v":256686166.0,"all_q":33727,"foc_v":132948433.0,"foc_q":3870,"fp":{"ALS-LX":{"v":3019086.0,"q":441},"CSD-S":{"v":96701772.0,"q":2722},"EYB UD":{"v":3427861.0,"q":73},"TPC UD":{"v":3190356.0,"q":68},"IKR":{"v":26609358.0,"q":566}}}},"서준희":{"202510":{"all_v":135421959.0,"all_q":21483,"foc_v":57031867.0,"foc_q":2117,"fp":{"ALS-LX":{"v":5682180.0,"q":830},"CSD-S":{"v":28278696.0,"q":796},"EYB UD":{"v":892183.0,"q":19},"TPC UD":{"v":5536206.0,"q":118},"IKR":{"v":16642602.0,"q":354}}},"202511":{"all_v":126059198.0,"all_q":19054,"foc_v":48680600.0,"foc_q":1631,"fp":{"ALS-LX":{"v":3553074.0,"q":519},"CSD-S":{"v":22097172.0,"q":622},"EYB UD":{"v":375656.0,"q":8},"TPC UD":{"v":2721186.0,"q":58},"IKR":{"v":19933512.0,"q":424}}},"202512":{"all_v":145230761.0,"all_q":21126,"foc_v":56892782.0,"foc_q":1868,"fp":{"ALS-LX":{"v":3799530.0,"q":555},"CSD-S":{"v":26680026.0,"q":751},"EYB UD":{"v":657398.0,"q":14},"TPC UD":{"v":3565692.0,"q":76},"IKR":{"v":22190136.0,"q":472}}},"202601":{"all_v":158334406.0,"all_q":21689,"foc_v":66543912.0,"foc_q":2028,"fp":{"ALS-LX":{"v":3416154.0,"q":499},"CSD-S":{"v":27035286.0,"q":761},"EYB UD":{"v":704355.0,"q":15},"TPC UD":{"v":6193044.0,"q":132},"IKR":{"v":29195073.0,"q":621}}},"202602":{"all_v":123702003.0,"all_q":18726,"foc_v":51942386.0,"foc_q":1670,"fp":{"ALS-LX":{"v":3279234.0,"q":479},"CSD-S":{"v":22630062.0,"q":637},"EYB UD":{"v":657398.0,"q":14},"TPC UD":{"v":5536206.0,"q":118},"IKR":{"v":19839486.0,"q":422}}},"202603":{"all_v":148301110.0,"all_q":23056,"foc_v":66705453.0,"foc_q":2211,"fp":{"ALS-LX":{"v":4614204.0,"q":674},"CSD-S":{"v":31404984.0,"q":884},"EYB UD":{"v":704355.0,"q":15},"TPC UD":{"v":6052293.0,"q":129},"IKR":{"v":23929617.0,"q":509}}},"202604":{"all_v":163755049.0,"all_q":25342,"foc_v":71630023.0,"foc_q":2574,"fp":{"ALS-LX":{"v":6736464.0,"q":984},"CSD-S":{"v":30445782.0,"q":857},"EYB UD":{"v":2160022.0,"q":46},"TPC UD":{"v":4973202.0,"q":106},"IKR":{"v":27314553.0,"q":581}}},"202605":{"all_v":138474669.0,"all_q":21004,"foc_v":59119484.0,"foc_q":1907,"fp":{"ALS-LX":{"v":3826914.0,"q":559},"CSD-S":{"v":24939252.0,"q":702},"EYB UD":{"v":1925237.0,"q":41},"TPC UD":{"v":7225218.0,"q":154},"IKR":{"v":21202863.0,"q":451}}},"202606":{"all_v":169551007.0,"all_q":24464,"foc_v":73871754.0,"foc_q":2362,"fp":{"ALS-LX":{"v":4504668.0,"q":658},"CSD-S":{"v":33181284.0,"q":934},"EYB UD":{"v":2253936.0,"q":48},"TPC UD":{"v":5630040.0,"q":120},"IKR":{"v":28301826.0,"q":602}}}},"류동균":{"202510":{"all_v":249495789.0,"all_q":31978,"foc_v":113944029.0,"foc_q":3280,"fp":{"ALS-LX":{"v":3073854.0,"q":449},"CSD-S":{"v":68636232.0,"q":1932},"EYB UD":{"v":6057453.0,"q":129},"TPC UD":{"v":11494665.0,"q":245},"IKR":{"v":24681825.0,"q":525}}},"202511":{"all_v":224201629.0,"all_q":28179,"foc_v":99953785.0,"foc_q":2893,"fp":{"ALS-LX":{"v":2546712.0,"q":372},"CSD-S":{"v":65225736.0,"q":1836},"EYB UD":{"v":4273087.0,"q":91},"TPC UD":{"v":8538894.0,"q":182},"IKR":{"v":19369356.0,"q":412}}},"202512":{"all_v":267426243.0,"all_q":34102,"foc_v":116867179.0,"foc_q":3248,"fp":{"ALS-LX":{"v":1999032.0,"q":292},"CSD-S":{"v":74426970.0,"q":2095},"EYB UD":{"v":10753153.0,"q":229},"TPC UD":{"v":11823084.0,"q":252},"IKR":{"v":17864940.0,"q":380}}},"202601":{"all_v":266982086.0,"all_q":38560,"foc_v":113395380.0,"foc_q":3101,"fp":{"ALS-LX":{"v":1574580.0,"q":230},"CSD-S":{"v":71513838.0,"q":2013},"EYB UD":{"v":8734002.0,"q":186},"TPC UD":{"v":9664902.0,"q":206},"IKR":{"v":21908058.0,"q":466}}},"202602":{"all_v":230260223.0,"all_q":33319,"foc_v":98133861.0,"foc_q":2745,"fp":{"ALS-LX":{"v":1540350.0,"q":225},"CSD-S":{"v":67605978.0,"q":1903},"EYB UD":{"v":8452260.0,"q":180},"TPC UD":{"v":4597866.0,"q":98},"IKR":{"v":15937407.0,"q":339}}},"202603":{"all_v":272554183.0,"all_q":35956,"foc_v":119547666.0,"foc_q":3387,"fp":{"ALS-LX":{"v":2416638.0,"q":353},"CSD-S":{"v":78796668.0,"q":2218},"EYB UD":{"v":10001841.0,"q":213},"TPC UD":{"v":7975890.0,"q":170},"IKR":{"v":20356629.0,"q":433}}},"202604":{"all_v":275753455.0,"all_q":36192,"foc_v":124040789.0,"foc_q":3795,"fp":{"ALS-LX":{"v":4860660.0,"q":710},"CSD-S":{"v":79862448.0,"q":2248},"EYB UD":{"v":10095755.0,"q":215},"TPC UD":{"v":9852570.0,"q":210},"IKR":{"v":19369356.0,"q":412}}},"202605":{"all_v":228055662.0,"all_q":30406,"foc_v":104795996.0,"foc_q":3051,"fp":{"ALS-LX":{"v":2950626.0,"q":431},"CSD-S":{"v":65865204.0,"q":1854},"EYB UD":{"v":11363594.0,"q":242},"TPC UD":{"v":8914230.0,"q":190},"IKR":{"v":15702342.0,"q":334}}},"202606":{"all_v":250603932.0,"all_q":32552,"foc_v":105426589.0,"foc_q":3042,"fp":{"ALS-LX":{"v":2704170.0,"q":395},"CSD-S":{"v":67073088.0,"q":1888},"EYB UD":{"v":12020992.0,"q":256},"TPC UD":{"v":9383400.0,"q":200},"IKR":{"v":14244939.0,"q":303}}}},"오민석":{"202510":{"all_v":131470695.0,"all_q":14565,"foc_v":56562630.0,"foc_q":1573,"fp":{"ALS-LX":{"v":1280202.0,"q":187},"CSD-S":{"v":30481308.0,"q":858},"EYB UD":{"v":281742.0,"q":6},"TPC UD":{"v":10462491.0,"q":223},"IKR":{"v":14056887.0,"q":299}}},"202511":{"all_v":136376088.0,"all_q":13982,"foc_v":57816678.0,"foc_q":1601,"fp":{"ALS-LX":{"v":1198050.0,"q":175},"CSD-S":{"v":32186556.0,"q":906},"EYB UD":{"v":1690452.0,"q":36},"TPC UD":{"v":6193044.0,"q":132},"IKR":{"v":16548576.0,"q":352}}},"202512":{"all_v":157171976.0,"all_q":16507,"foc_v":71863186.0,"foc_q":1886,"fp":{"ALS-LX":{"v":1013208.0,"q":148},"CSD-S":{"v":33536544.0,"q":944},"EYB UD":{"v":2019151.0,"q":43},"TPC UD":{"v":6099210.0,"q":130},"IKR":{"v":29195073.0,"q":621}}},"202601":{"all_v":150806369.0,"all_q":15896,"foc_v":70993882.0,"foc_q":1852,"fp":{"ALS-LX":{"v":985824.0,"q":144},"CSD-S":{"v":31760244.0,"q":894},"EYB UD":{"v":1314796.0,"q":28},"TPC UD":{"v":9383400.0,"q":200},"IKR":{"v":27549618.0,"q":586}}},"202602":{"all_v":130939343.0,"all_q":14743,"foc_v":55540538.0,"foc_q":1529,"fp":{"ALS-LX":{"v":1163820.0,"q":170},"CSD-S":{"v":29380002.0,"q":827},"EYB UD":{"v":2488721.0,"q":53},"TPC UD":{"v":5489289.0,"q":117},"IKR":{"v":17018706.0,"q":362}}},"202603":{"all_v":140827209.0,"all_q":15633,"foc_v":58884296.0,"foc_q":1703,"fp":{"ALS-LX":{"v":1944264.0,"q":284},"CSD-S":{"v":30161574.0,"q":849},"EYB UD":{"v":3897431.0,"q":83},"TPC UD":{"v":6990633.0,"q":149},"IKR":{"v":15890394.0,"q":338}}},"202604":{"all_v":140721648.0,"all_q":14365,"foc_v":61481769.0,"foc_q":2043,"fp":{"ALS-LX":{"v":4203444.0,"q":614},"CSD-S":{"v":30552360.0,"q":860},"EYB UD":{"v":2535678.0,"q":54},"TPC UD":{"v":10462491.0,"q":223},"IKR":{"v":13727796.0,"q":292}}},"202605":{"all_v":120735487.0,"all_q":12555,"foc_v":57493241.0,"foc_q":1606,"fp":{"ALS-LX":{"v":1738884.0,"q":254},"CSD-S":{"v":24051102.0,"q":677},"EYB UD":{"v":17139305.0,"q":365},"TPC UD":{"v":4926285.0,"q":105},"IKR":{"v":9637665.0,"q":205}}},"202606":{"all_v":138935533.0,"all_q":13195,"foc_v":72567771.0,"foc_q":1992,"fp":{"ALS-LX":{"v":2094876.0,"q":306},"CSD-S":{"v":27035286.0,"q":761},"EYB UD":{"v":20426295.0,"q":435},"TPC UD":{"v":12245337.0,"q":261},"IKR":{"v":10765977.0,"q":229}}}},"강태욱":{"202510":{"all_v":221285344.0,"all_q":20953,"foc_v":124821117.0,"foc_q":3229,"fp":{"ALS-LX":{"v":807828.0,"q":118},"CSD-S":{"v":68707284.0,"q":1934},"EYB UD":{"v":140871.0,"q":3},"TPC UD":{"v":13746681.0,"q":293},"IKR":{"v":41418453.0,"q":881}}},"202511":{"all_v":216610573.0,"all_q":19456,"foc_v":122816094.0,"foc_q":3108,"fp":{"ALS-LX":{"v":308070.0,"q":45},"CSD-S":{"v":66398094.0,"q":1869},"EYB UD":{"v":1267839.0,"q":27},"TPC UD":{"v":10790910.0,"q":230},"IKR":{"v":44051181.0,"q":937}}},"202512":{"all_v":265304980.0,"all_q":24090,"foc_v":156599306.0,"foc_q":4004,"fp":{"ALS-LX":{"v":903672.0,"q":132},"CSD-S":{"v":81354540.0,"q":2290},"EYB UD":{"v":939140.0,"q":20},"TPC UD":{"v":15811029.0,"q":337},"IKR":{"v":57590925.0,"q":1225}}},"202601":{"all_v":197958173.0,"all_q":21716,"foc_v":112755675.0,"foc_q":2909,"fp":{"ALS-LX":{"v":650370.0,"q":95},"CSD-S":{"v":62348130.0,"q":1755},"EYB UD":{"v":3803517.0,"q":81},"TPC UD":{"v":12245337.0,"q":261},"IKR":{"v":33708321.0,"q":717}}},"202602":{"all_v":157066567.0,"all_q":20433,"foc_v":78857966.0,"foc_q":2016,"fp":{"ALS-LX":{"v":465528.0,"q":68},"CSD-S":{"v":40712796.0,"q":1146},"EYB UD":{"v":1784366.0,"q":38},"TPC UD":{"v":11072412.0,"q":236},"IKR":{"v":24822864.0,"q":528}}},"202603":{"all_v":189951011.0,"all_q":22218,"foc_v":99047938.0,"foc_q":2519,"fp":{"ALS-LX":{"v":609294.0,"q":89},"CSD-S":{"v":48812724.0,"q":1374},"EYB UD":{"v":1314796.0,"q":28},"TPC UD":{"v":8914230.0,"q":190},"IKR":{"v":39396894.0,"q":838}}},"202604":{"all_v":198073977.0,"all_q":22299,"foc_v":109765251.0,"foc_q":2820,"fp":{"ALS-LX":{"v":985824.0,"q":144},"CSD-S":{"v":52542954.0,"q":1479},"EYB UD":{"v":10847067.0,"q":231},"TPC UD":{"v":12292254.0,"q":262},"IKR":{"v":33097152.0,"q":704}}},"202605":{"all_v":178612449.0,"all_q":19597,"foc_v":104265408.0,"foc_q":2707,"fp":{"ALS-LX":{"v":937902.0,"q":137},"CSD-S":{"v":53999520.0,"q":1520},"EYB UD":{"v":8734002.0,"q":186},"TPC UD":{"v":12339171.0,"q":263},"IKR":{"v":28254813.0,"q":601}}},"202606":{"all_v":193902611.0,"all_q":20687,"foc_v":111787214.0,"foc_q":2783,"fp":{"ALS-LX":{"v":362838.0,"q":53},"CSD-S":{"v":52223220.0,"q":1470},"EYB UD":{"v":10377497.0,"q":221},"TPC UD":{"v":11166246.0,"q":238},"IKR":{"v":37657413.0,"q":801}}}},"한정호":{"202510":{"all_v":224151149.0,"all_q":36199,"foc_v":93982859.0,"foc_q":2855,"fp":{"ALS-LX":{"v":5079732.0,"q":742},"CSD-S":{"v":32186556.0,"q":906},"EYB UD":{"v":4179173.0,"q":89},"TPC UD":{"v":11306997.0,"q":241},"IKR":{"v":41230401.0,"q":877}}},"202511":{"all_v":247956830.0,"all_q":36813,"foc_v":112336543.0,"foc_q":3303,"fp":{"ALS-LX":{"v":4641588.0,"q":678},"CSD-S":{"v":48528516.0,"q":1366},"EYB UD":{"v":3850474.0,"q":82},"TPC UD":{"v":8961147.0,"q":191},"IKR":{"v":46354818.0,"q":986}}},"202512":{"all_v":241396440.0,"all_q":36708,"foc_v":110820264.0,"foc_q":3238,"fp":{"ALS-LX":{"v":4278750.0,"q":625},"CSD-S":{"v":50340342.0,"q":1417},"EYB UD":{"v":4085259.0,"q":87},"TPC UD":{"v":10509408.0,"q":224},"IKR":{"v":41606505.0,"q":885}}},"202601":{"all_v":271373166.0,"all_q":39518,"foc_v":129850753.0,"foc_q":3664,"fp":{"ALS-LX":{"v":4737432.0,"q":692},"CSD-S":{"v":45082494.0,"q":1269},"EYB UD":{"v":4554829.0,"q":97},"TPC UD":{"v":13136760.0,"q":280},"IKR":{"v":62339238.0,"q":1326}}},"202602":{"all_v":223756113.0,"all_q":33551,"foc_v":104993269.0,"foc_q":2957,"fp":{"ALS-LX":{"v":3607842.0,"q":527},"CSD-S":{"v":39682542.0,"q":1117},"EYB UD":{"v":3568732.0,"q":76},"TPC UD":{"v":10227906.0,"q":218},"IKR":{"v":47906247.0,"q":1019}}},"202603":{"all_v":275655325.0,"all_q":44692,"foc_v":126392406.0,"foc_q":3684,"fp":{"ALS-LX":{"v":5257728.0,"q":768},"CSD-S":{"v":49239036.0,"q":1386},"EYB UD":{"v":5212227.0,"q":111},"TPC UD":{"v":13699764.0,"q":292},"IKR":{"v":52983651.0,"q":1127}}},"202604":{"all_v":272027591.0,"all_q":45546,"foc_v":119794482.0,"foc_q":4159,"fp":{"ALS-LX":{"v":10440150.0,"q":1525},"CSD-S":{"v":44691708.0,"q":1258},"EYB UD":{"v":6198324.0,"q":132},"TPC UD":{"v":9711819.0,"q":207},"IKR":{"v":48752481.0,"q":1037}}},"202605":{"all_v":257624485.0,"all_q":40218,"foc_v":116905269.0,"foc_q":3654,"fp":{"ALS-LX":{"v":6537930.0,"q":955},"CSD-S":{"v":51015336.0,"q":1436},"EYB UD":{"v":5775711.0,"q":123},"TPC UD":{"v":9054981.0,"q":193},"IKR":{"v":44521311.0,"q":947}}},"202606":{"all_v":287276798.0,"all_q":48255,"foc_v":116195270.0,"foc_q":3649,"fp":{"ALS-LX":{"v":6668004.0,"q":974},"CSD-S":{"v":50127186.0,"q":1411},"EYB UD":{"v":7137464.0,"q":152},"TPC UD":{"v":7741305.0,"q":165},"IKR":{"v":44521311.0,"q":947}}}},"배승현":{"202510":{"all_v":163374502.0,"all_q":27995,"foc_v":77253435.0,"foc_q":2493,"fp":{"ALS-LX":{"v":3758454.0,"q":549},"CSD-S":{"v":55313982.0,"q":1557},"EYB UD":{"v":1831323.0,"q":39},"TPC UD":{"v":5301621.0,"q":113},"IKR":{"v":11048055.0,"q":235}}},"202511":{"all_v":212508431.0,"all_q":29242,"foc_v":97718159.0,"foc_q":2884,"fp":{"ALS-LX":{"v":3012240.0,"q":440},"CSD-S":{"v":62348130.0,"q":1755},"EYB UD":{"v":798269.0,"q":17},"TPC UD":{"v":16233282.0,"q":346},"IKR":{"v":15326238.0,"q":326}}},"202512":{"all_v":222540219.0,"all_q":29889,"foc_v":121051282.0,"foc_q":3442,"fp":{"ALS-LX":{"v":2854782.0,"q":417},"CSD-S":{"v":74142762.0,"q":2087},"EYB UD":{"v":1455667.0,"q":31},"TPC UD":{"v":20878065.0,"q":445},"IKR":{"v":21720006.0,"q":462}}},"202601":{"all_v":195442994.0,"all_q":31320,"foc_v":72267315.0,"foc_q":2241,"fp":{"ALS-LX":{"v":3053316.0,"q":446},"CSD-S":{"v":46894320.0,"q":1320},"EYB UD":{"v":1267839.0,"q":27},"TPC UD":{"v":4879368.0,"q":104},"IKR":{"v":16172472.0,"q":344}}},"202602":{"all_v":159216683.0,"all_q":26149,"foc_v":66473086.0,"foc_q":2041,"fp":{"ALS-LX":{"v":2731554.0,"q":399},"CSD-S":{"v":41565420.0,"q":1170},"EYB UD":{"v":892183.0,"q":19},"TPC UD":{"v":6333795.0,"q":135},"IKR":{"v":14950134.0,"q":318}}},"202603":{"all_v":206820307.0,"all_q":32917,"foc_v":91821339.0,"foc_q":2826,"fp":{"ALS-LX":{"v":3470922.0,"q":507},"CSD-S":{"v":63875748.0,"q":1798},"EYB UD":{"v":1126968.0,"q":24},"TPC UD":{"v":8679645.0,"q":185},"IKR":{"v":14668056.0,"q":312}}},"202604":{"all_v":239485797.0,"all_q":36249,"foc_v":108905560.0,"foc_q":3623,"fp":{"ALS-LX":{"v":6763848.0,"q":988},"CSD-S":{"v":67108614.0,"q":1889},"EYB UD":{"v":4273087.0,"q":91},"TPC UD":{"v":16374033.0,"q":349},"IKR":{"v":14385978.0,"q":306}}},"202605":{"all_v":220734805.0,"all_q":30666,"foc_v":113145374.0,"foc_q":3436,"fp":{"ALS-LX":{"v":4470438.0,"q":653},"CSD-S":{"v":68387550.0,"q":1925},"EYB UD":{"v":13476659.0,"q":287},"TPC UD":{"v":16467867.0,"q":351},"IKR":{"v":10342860.0,"q":220}}},"202606":{"all_v":233704155.0,"all_q":33104,"foc_v":121714576.0,"foc_q":3495,"fp":{"ALS-LX":{"v":3231312.0,"q":472},"CSD-S":{"v":72934878.0,"q":2053},"EYB UD":{"v":17937574.0,"q":382},"TPC UD":{"v":16045614.0,"q":342},"IKR":{"v":11565198.0,"q":246}}}},"임다빈":{"202510":{"all_v":164528160.0,"all_q":30470,"foc_v":81517044.0,"foc_q":3280,"fp":{"ALS-LX":{"v":9769242.0,"q":1427},"CSD-S":{"v":47498262.0,"q":1337},"EYB UD":{"v":3662646.0,"q":78},"TPC UD":{"v":2345850.0,"q":50},"IKR":{"v":18241044.0,"q":388}}},"202511":{"all_v":160899374.0,"all_q":28494,"foc_v":77047850.0,"foc_q":2718,"fp":{"ALS-LX":{"v":6195630.0,"q":905},"CSD-S":{"v":44443026.0,"q":1251},"EYB UD":{"v":1220882.0,"q":26},"TPC UD":{"v":5207787.0,"q":111},"IKR":{"v":19980525.0,"q":425}}},"202512":{"all_v":175444696.0,"all_q":32530,"foc_v":84512310.0,"foc_q":3162,"fp":{"ALS-LX":{"v":7927668.0,"q":1158},"CSD-S":{"v":54496884.0,"q":1534},"EYB UD":{"v":1126968.0,"q":24},"TPC UD":{"v":3424941.0,"q":73},"IKR":{"v":17535849.0,"q":373}}},"202601":{"all_v":178697247.0,"all_q":32014,"foc_v":83556933.0,"foc_q":3006,"fp":{"ALS-LX":{"v":7119840.0,"q":1040},"CSD-S":{"v":49416666.0,"q":1391},"EYB UD":{"v":4789614.0,"q":102},"TPC UD":{"v":3096522.0,"q":66},"IKR":{"v":19134291.0,"q":407}}},"202602":{"all_v":159108084.0,"all_q":28485,"foc_v":77509487.0,"foc_q":2798,"fp":{"ALS-LX":{"v":6421548.0,"q":938},"CSD-S":{"v":50553498.0,"q":1423},"EYB UD":{"v":939140.0,"q":20},"TPC UD":{"v":4457115.0,"q":95},"IKR":{"v":15138186.0,"q":322}}},"202603":{"all_v":202748917.0,"all_q":36789,"foc_v":95184217.0,"foc_q":3576,"fp":{"ALS-LX":{"v":8981952.0,"q":1312},"CSD-S":{"v":62561286.0,"q":1761},"EYB UD":{"v":1878280.0,"q":40},"TPC UD":{"v":2111265.0,"q":45},"IKR":{"v":19651434.0,"q":418}}},"202604":{"all_v":217670010.0,"all_q":41093,"foc_v":106394809.0,"foc_q":4651,"fp":{"ALS-LX":{"v":15732108.0,"q":2298},"CSD-S":{"v":61673136.0,"q":1736},"EYB UD":{"v":3850474.0,"q":82},"TPC UD":{"v":6286878.0,"q":134},"IKR":{"v":18852213.0,"q":401}}},"202605":{"all_v":185305403.0,"all_q":33924,"foc_v":90367126.0,"foc_q":3498,"fp":{"ALS-LX":{"v":9707628.0,"q":1418},"CSD-S":{"v":52933740.0,"q":1490},"EYB UD":{"v":3709603.0,"q":79},"TPC UD":{"v":3659526.0,"q":78},"IKR":{"v":20356629.0,"q":433}}},"202606":{"all_v":195954924.0,"all_q":36257,"foc_v":95077146.0,"foc_q":3522,"fp":{"ALS-LX":{"v":8906646.0,"q":1301},"CSD-S":{"v":56379762.0,"q":1587},"EYB UD":{"v":5353098.0,"q":114},"TPC UD":{"v":4457115.0,"q":95},"IKR":{"v":19980525.0,"q":425}}}},"주해린":{"202510":{"all_v":236663433.0,"all_q":29611,"foc_v":115028811.0,"foc_q":3367,"fp":{"ALS-LX":{"v":4463592.0,"q":652},"CSD-S":{"v":52720584.0,"q":1484},"EYB UD":{"v":18313230.0,"q":390},"TPC UD":{"v":3190356.0,"q":68},"IKR":{"v":36341049.0,"q":773}}},"202511":{"all_v":241110062.0,"all_q":27340,"foc_v":122133581.0,"foc_q":3508,"fp":{"ALS-LX":{"v":4388286.0,"q":641},"CSD-S":{"v":52578480.0,"q":1480},"EYB UD":{"v":17139305.0,"q":365},"TPC UD":{"v":9664902.0,"q":206},"IKR":{"v":38362608.0,"q":816}}},"202512":{"all_v":262360089.0,"all_q":32983,"foc_v":123783065.0,"foc_q":3619,"fp":{"ALS-LX":{"v":4559436.0,"q":666},"CSD-S":{"v":60536304.0,"q":1704},"EYB UD":{"v":12349691.0,"q":263},"TPC UD":{"v":8398143.0,"q":179},"IKR":{"v":37939491.0,"q":807}}},"202601":{"all_v":262467801.0,"all_q":31026,"foc_v":133308795.0,"foc_q":3669,"fp":{"ALS-LX":{"v":3744762.0,"q":547},"CSD-S":{"v":53111370.0,"q":1495},"EYB UD":{"v":18876714.0,"q":402},"TPC UD":{"v":7319052.0,"q":156},"IKR":{"v":50256897.0,"q":1069}}},"202602":{"all_v":206289720.0,"all_q":27546,"foc_v":100348337.0,"foc_q":2989,"fp":{"ALS-LX":{"v":4340364.0,"q":634},"CSD-S":{"v":45402228.0,"q":1278},"EYB UD":{"v":12067949.0,"q":257},"TPC UD":{"v":6286878.0,"q":134},"IKR":{"v":32250918.0,"q":686}}},"202603":{"all_v":242031408.0,"all_q":31613,"foc_v":118881135.0,"foc_q":3605,"fp":{"ALS-LX":{"v":5387802.0,"q":787},"CSD-S":{"v":58653426.0,"q":1651},"EYB UD":{"v":11974035.0,"q":255},"TPC UD":{"v":4879368.0,"q":104},"IKR":{"v":37986504.0,"q":808}}},"202604":{"all_v":275347517.0,"all_q":34210,"foc_v":140618401.0,"foc_q":4620,"fp":{"ALS-LX":{"v":10029390.0,"q":1465},"CSD-S":{"v":54710040.0,"q":1540},"EYB UD":{"v":23572414.0,"q":502},"TPC UD":{"v":9242649.0,"q":197},"IKR":{"v":43063908.0,"q":916}}},"202605":{"all_v":223767487.0,"all_q":29814,"foc_v":109778080.0,"foc_q":3350,"fp":{"ALS-LX":{"v":5497338.0,"q":803},"CSD-S":{"v":47711418.0,"q":1343},"EYB UD":{"v":15824509.0,"q":337},"TPC UD":{"v":7553637.0,"q":161},"IKR":{"v":33191178.0,"q":706}}},"202606":{"all_v":257929736.0,"all_q":31194,"foc_v":131759545.0,"foc_q":3742,"fp":{"ALS-LX":{"v":4778508.0,"q":698},"CSD-S":{"v":49771926.0,"q":1401},"EYB UD":{"v":20473252.0,"q":436},"TPC UD":{"v":4316364.0,"q":92},"IKR":{"v":52419495.0,"q":1115}}}}},"unassigned":{"202510":8312279852.0,"202511":8184174897.0,"202512":9203049104.0,"202601":9435509558.0,"202602":7796548404.0,"202603":9722951717.0,"202604":10180644241.0,"202605":8939802477.0,"202606":9699150742.0}};
+const META={'한종찬':['g2','성남'],'서준희':['g2','용인/오산/광주'],'류동균':['g2','강남 Z1'],'오민석':['g2','강남 Z2'],
+ '강태욱':['g0','서초'],'한정호':['g2','강동/하남'],'배승현':['g0','수원'],'임다빈':['g1','화성/평택/안성'],'주해린':['g1','송파']};
+const GN={g2:'GG13-2',g1:'GG13-1',g0:'GG13'};
+const MRCOL={'한종찬':'#1F7A44','서준희':'#57B368','류동균':'#0E9E8E','오민석':'#7BC96F',
+ '강태욱':'#E4572E','한정호':'#2E7D5B','배승현':'#8A6D3B','임다빈':'#1F6F8B','주해린':'#3E5C99'};
+const FOCCOL={'ALS-LX':'#E4572E','CSD-S':'#1F6F8B','EYB UD':'#6A4C93','TPC UD':'#E8A33D','IKR':'#1F7A44'};
+let unit='v';
+const L=D.labels;
+const fmtV=x=>x>=1e9?(x/1e9).toFixed(2)+'B':(x/1e6).toFixed(1)+'M';
+const fmt=x=>unit==='v'?fmtV(x):Math.round(x).toLocaleString();
+const keyAll=()=>unit==='v'?'all_v':'all_q';
+const keyFoc=()=>unit==='v'?'foc_v':'foc_q';
+const charts={};
+function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
+function barDS(label,color,data){return{label,data,backgroundColor:color,borderColor:color,borderWidth:1,borderRadius:3,maxBarThickness:46};}
+const baseOpt=()=>({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:11},padding:8}},
+    tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)}}},
+  scales:{y:{beginAtZero:true,ticks:{callback:v=>unit==='v'?fmtV(v):v.toLocaleString()}}}});
+
+function teamSeries(k){return L.map((_,i)=>D.team[D.months[i]][k]);}
+function renderTeam(){
+  mk('cTeamAll',{type:'bar',data:{labels:L,datasets:[barDS('전체제품','#1F6F8B',teamSeries(keyAll()))]},options:baseOpt()});
+  mk('cTeamFoc',{type:'bar',data:{labels:L,datasets:[barDS('Focus 5','#1F7A44',teamSeries(keyFoc()))]},options:baseOpt()});
+  mk('cTeamFocProd',{type:'bar',data:{labels:L,datasets:D.focusOrder.map(fp=>barDS(fp,FOCCOL[fp],L.map((_,i)=>D.team[D.months[i]].fp[fp][unit])))},options:baseOpt()});
+  let h='<table><thead><tr><th>구분</th>'+L.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>';
+  [['전체제품',keyAll()],['Focus 5',keyFoc()]].forEach(([nm,k])=>{h+='<tr><td class="name">'+nm+'</td>'+L.map((_,i)=>'<td>'+fmt(D.team[D.months[i]][k])+'</td>').join('')+'</tr>';});
+  h+='<tr><td class="name">Focus 비중</td>'+L.map((_,i)=>{const t=D.team[D.months[i]];return '<td>'+(t.foc_v/t.all_v*100).toFixed(1)+'%</td>';}).join('')+'</tr></tbody></table>';
+  document.getElementById('teamTable').innerHTML=h;
+}
+function mrChart(id,k){mk(id,{type:'bar',data:{labels:L,datasets:D.mrs.map(mr=>barDS(mr,MRCOL[mr],L.map((_,i)=>D.byMR[mr][D.months[i]][k])))},options:baseOpt()});}
+function mrTable(elId,k){
+  let h='<table><thead><tr><th>MR</th><th>담당</th>'+L.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>';
+  D.mrs.forEach(mr=>{const[g,terr]=META[mr];
+    h+='<tr><td class="name">'+mr+'<span class="pill '+g+'">'+GN[g]+'</span></td><td class="name" style="font-weight:500">'+terr+'</td>'+L.map((_,i)=>'<td>'+fmt(D.byMR[mr][D.months[i]][k])+'</td>').join('')+'</tr>';});
+  h+='<tr class="grand"><td class="name">팀 합계</td><td></td>'+L.map((_,i)=>'<td>'+fmt(D.team[D.months[i]][k.startsWith('all')?keyAll():keyFoc()])+'</td>').join('')+'</tr></tbody></table>';
+  document.getElementById(elId).innerHTML=h;
+}
+function renderMrAll(){mrChart('cMrAll',keyAll());mrTable('mrAllTable',keyAll());}
+function renderMrFoc(){mrChart('cMrFoc',keyFoc());mrTable('mrFocTable',keyFoc());}
+function renderDetail(){
+  const mr=document.getElementById('mrPick').value;const[g,terr]=META[mr];
+  document.getElementById('mrMeta').textContent='('+terr+' · '+GN[g]+')';
+  document.getElementById('detTitle').textContent=mr+' — Focus 5 제품별 트렌드';
+  mk('cDetail',{type:'bar',data:{labels:L,datasets:D.focusOrder.map(fp=>barDS(fp,FOCCOL[fp],L.map((_,i)=>D.byMR[mr][D.months[i]].fp[fp][unit])))},options:baseOpt()});
+  let h='<table><thead><tr><th>제품</th>'+L.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>';
+  D.focusOrder.forEach(fp=>{h+='<tr><td class="name">'+fp+'</td>'+L.map((_,i)=>'<td>'+fmt(D.byMR[mr][D.months[i]].fp[fp][unit])+'</td>').join('')+'</tr>';});
+  h+='<tr class="grand"><td class="name">Focus 합계</td>'+L.map((_,i)=>'<td>'+fmt(D.byMR[mr][D.months[i]][keyFoc()])+'</td>').join('')+'</tr></tbody></table>';
+  document.getElementById('detTable').innerHTML=h;
+}
+
+/* ===== 성장률 ===== */
+let gMetric='MoM', gTarget='all';
+function lblOf(m){return D.labels[D.months.indexOf(m)];}
+function gval(scope,m){const k=unit==='v'?(gTarget==='all'?'all_v':'foc_v'):(gTarget==='all'?'all_q':'foc_q');const o=scope==='__team__'?D.team[m]:D.byMR[scope][m];return o[k];}
+function gPeriods(metric){
+  if(metric==='MoM'||metric==='YoY')return D.months.map(m=>({key:m,label:lblOf(m),months:[m]}));
+  const map=new Map();
+  D.months.forEach(m=>{const y=m.slice(2,4),mm=+m.slice(4);let key=metric==='QoQ'?y+'Q'+Math.ceil(mm/3):y+'H'+(mm<=6?1:2);
+    if(!map.has(key))map.set(key,{key,label:key,months:[]});map.get(key).months.push(m);});
+  return [...map.values()];
+}
+function gComplete(p,metric){if(metric==='QoQ')return p.months.length>=3;if(metric==='HoH')return p.months.length>=6;return true;}
+function gSum(scope,p){return p.months.reduce((s,m)=>s+gval(scope,m),0);}
+function gPairs(scope,metric){const P=gPeriods(metric);const out=[];
+  if(metric==='YoY'){P.forEach(p=>{const y=+p.key.slice(0,4),mm=p.key.slice(4);const pk=(y-1)+mm;
+    if(D.months.includes(pk)){const cur=gSum(scope,p),prev=gval(scope,pk);out.push({label:p.label,pair:lblOf(pk)+'→'+p.label,g:prev?(cur-prev)/prev:null});}});}
+  else{for(let i=1;i<P.length;i++){const a=P[i-1],b=P[i];const ok=gComplete(a,metric)&&gComplete(b,metric);
+    const cur=gSum(scope,b),prev=gSum(scope,a);out.push({label:b.label,pair:a.label+'→'+b.label,g:(ok&&prev)?(cur-prev)/prev:null});}}
+  return out;
+}
+function gLatestIdx(metric){const P=gPeriods(metric);
+  if(metric==='YoY'){for(let i=P.length-1;i>=0;i--){const y=+P[i].key.slice(0,4),mm=P[i].key.slice(4);if(D.months.includes((y-1)+mm))return i;}return -1;}
+  for(let i=P.length-1;i>=1;i--){if(gComplete(P[i],metric)&&gComplete(P[i-1],metric))return i;}return -1;}
+function gRank(metric){const P=gPeriods(metric),idx=gLatestIdx(metric);if(idx<0)return null;
+  let label,prevOf;
+  if(metric==='YoY'){const y=+P[idx].key.slice(0,4),mm=P[idx].key.slice(4);const pk=(y-1)+mm;label=lblOf(pk)+'→'+P[idx].label;prevOf=sc=>gval(sc,pk);}
+  else{label=P[idx-1].label+'→'+P[idx].label;prevOf=sc=>gSum(sc,P[idx-1]);}
+  const rows=D.mrs.map(mr=>{const cur=gSum(mr,P[idx]),prev=prevOf(mr);return{mr,cur,prev,g:prev?(cur-prev)/prev:null};});
+  rows.sort((a,b)=>(b.g==null?-1e9:b.g)-(a.g==null?-1e9:a.g));
+  const tc=gSum('__team__',P[idx]),tp=prevOf('__team__');
+  return{rows,team:{cur:tc,prev:tp,g:tp?(tc-tp)/tp:null},label};
+}
+const pct=g=>g==null?'N/A':(g>=0?'+':'')+(g*100).toFixed(1)+'%';
+function renderGrowth(){
+  const tgtL=gTarget==='all'?'전체제품':'Focus5', uL=unit==='v'?'실적':'수량';
+  const tp=gPairs('__team__',gMetric);
+  document.getElementById('gTeamTitle').textContent='팀 '+gMetric+' 성장률 추이 ('+tgtL+'·'+uL+')';
+  const gs=tp.map(p=>p.g==null?null:+(p.g*100).toFixed(1)), labs=tp.map(p=>p.pair);
+  mk('cGrowthTeam',{type:'bar',data:{labels:labs,datasets:[{label:gMetric,data:gs,backgroundColor:gs.map(v=>v==null?'#ccc':v>=0?'#1F7A44':'#E4572E'),borderRadius:3,maxBarThickness:46}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y==null?'N/A':c.parsed.y+'%'}}},scales:{y:{title:{display:true,text:'성장률(%)'},ticks:{callback:v=>v+'%'}}}}});
+  const R=gRank(gMetric);
+  if(!R){document.getElementById('gRankTitle').textContent='담당자별 '+gMetric+' 성장률 순위 — 데이터 부족';
+    mk('cRank',{type:'bar',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false}});
+    document.getElementById('rankTable').innerHTML='<div class="cap">'+gMetric+'는 현재 비교 가능한 완전한 기간이 없습니다. 매월 자료가 추가되면 자동 계산됩니다.</div>';
+  }else{
+    document.getElementById('gRankTitle').textContent='담당자별 '+gMetric+' 성장률 순위 ('+R.label+')';
+    const rows=R.rows;
+    mk('cRank',{type:'bar',data:{labels:rows.map(r=>r.mr),datasets:[{label:gMetric,data:rows.map(r=>r.g==null?null:+(r.g*100).toFixed(1)),backgroundColor:rows.map(r=>MRCOL[r.mr]),borderRadius:3}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.x==null?'N/A':c.parsed.x+'%'}}},scales:{x:{title:{display:true,text:'성장률(%)'},ticks:{callback:v=>v+'%'}}}}});
+    let h='<table><thead><tr><th>순위</th><th>MR</th><th>담당</th><th>이전</th><th>현재</th><th>'+gMetric+' 성장률</th></tr></thead><tbody>';
+    rows.forEach((r,i)=>{const[g,terr]=META[r.mr];
+      h+='<tr><td>'+(i+1)+'</td><td class="name">'+r.mr+'<span class="pill '+g+'">'+GN[g]+'</span></td><td class="name" style="font-weight:500">'+terr+'</td><td>'+fmt(r.prev)+'</td><td>'+fmt(r.cur)+'</td><td style="color:'+(r.g==null?'#999':r.g>=0?'#1a7f4b':'#c0392b')+';font-weight:700">'+pct(r.g)+'</td></tr>';});
+    const T=R.team;h+='<tr class="grand"><td></td><td class="name">팀 합계</td><td></td><td>'+fmt(T.prev)+'</td><td>'+fmt(T.cur)+'</td><td>'+pct(T.g)+'</td></tr></tbody></table>';
+    document.getElementById('rankTable').innerHTML=h;
+  }
+  let h='<table><thead><tr><th>MR</th>'+tp.map(p=>'<th>'+p.pair+'</th>').join('')+'</tr></thead><tbody>';
+  D.mrs.forEach(mr=>{const pr=gPairs(mr,gMetric);const[g]=META[mr];
+    h+='<tr><td class="name">'+mr+'<span class="pill '+g+'">'+GN[g]+'</span></td>'+pr.map(x=>'<td style="color:'+(x.g==null?'#999':x.g>=0?'#1a7f4b':'#c0392b')+'">'+pct(x.g)+'</td>').join('')+'</tr>';});
+  h+='<tr class="grand"><td class="name">팀 합계</td>'+tp.map(x=>'<td>'+pct(x.g)+'</td>').join('')+'</tr></tbody></table>';
+  document.getElementById('gTable').innerHTML=h;
+  const okMetric={MoM:true,QoQ:gLatestIdx('QoQ')>=0,HoH:gLatestIdx('HoH')>=0,YoY:gLatestIdx('YoY')>=0};
+  document.getElementById('gNote').textContent=okMetric[gMetric]?'':'⚠ 현재 '+gMetric+' 비교 데이터 부족 — 자료 축적 시 자동 계산';
+}
+
+let cur='team';
+function renderAll(){cur==='team'?renderTeam():cur==='mrAll'?renderMrAll():cur==='mrFoc'?renderMrFoc():cur==='mrDetail'?renderDetail():renderGrowth();}
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on'));b.classList.add('on');cur=b.dataset.t;
+  ['team','mrAll','mrFoc','mrDetail','growth'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hide',t!==cur));renderAll();});
+document.querySelectorAll('#unitSeg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#unitSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');unit=b.dataset.u;renderAll();});
+document.querySelectorAll('#metricSeg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#metricSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');gMetric=b.dataset.m;renderGrowth();});
+document.querySelectorAll('#tgtSeg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#tgtSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');gTarget=b.dataset.g;renderGrowth();});
+const sel=document.getElementById('mrPick');D.mrs.forEach(mr=>{const o=document.createElement('option');o.value=mr;o.textContent=mr;sel.appendChild(o);});sel.onchange=renderDetail;
+renderTeam();
+</script>
+</body>
+</html>
